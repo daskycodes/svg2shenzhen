@@ -9,7 +9,6 @@ import copy
 import platform
 import simplepath
 import simpletransform
-from simplestyle import *
 import cubicsuperpath
 import cspsubdiv
 import webbrowser
@@ -221,15 +220,15 @@ class Svg2ShenzhenExport(inkex.Effect):
     def __init__(self):
         """init the effect library and get options from gui"""
         inkex.Effect.__init__(self)
-        self.OptionParser.add_option("--path", action="store", type="string", dest="path", default="~/", help="")
-        self.OptionParser.add_option('-f', '--filetype', action='store', type='string', dest='filetype', default='jpeg', help='Exported file type')
-        self.OptionParser.add_option("--crop", action="store", type="inkbool", dest="crop", default=False)
-        self.OptionParser.add_option("--dpi", action="store", type="float", dest="dpi", default=600)
-        self.OptionParser.add_option("--threshold", action="store", type="float", dest="threshold", default=128.0)
-        self.OptionParser.add_option("--openfactory", action="store", type="inkbool", dest="openfactory", default="true")
-        self.OptionParser.add_option("--openkicad", action="store", type="inkbool", dest="openkicad", default="true")
-        self.OptionParser.add_option("--autoflatten", action="store", type="inkbool", dest="autoflatten", default="true")
-        self.OptionParser.add_option("--debug", action="store", type="inkbool", dest="debug", default=False)
+        self.arg_parser.add_argument("--path", type=str, dest="path", default="~/", help="")
+        self.arg_parser.add_argument('-f', '--filetype', type=str, dest='filetype', default='jpeg', help='Exported file type')
+        self.arg_parser.add_argument("--crop", type=inkex.Boolean, dest="crop", default=False)
+        self.arg_parser.add_argument("--dpi", type=float, dest="dpi", default=600)
+        self.arg_parser.add_argument("--threshold", type=float, dest="threshold", default=128.0)
+        self.arg_parser.add_argument("--openfactory", type=inkex.Boolean, dest="openfactory", default="true")
+        self.arg_parser.add_argument("--openkicad", type=inkex.Boolean, dest="openkicad", default="true")
+        self.arg_parser.add_argument("--autoflatten", type=inkex.Boolean, dest="autoflatten", default="true")
+        self.arg_parser.add_argument("--debug", type=inkex.Boolean, dest="debug", default=False)
 
 
         self.doc_width = 0
@@ -344,7 +343,7 @@ class Svg2ShenzhenExport(inkex.Effect):
         options = self.options
 
         output_path = os.path.expanduser(options.path)
-        curfile = self.args[-1]
+        curfile = self.options.input_file
         layers = self.get_layers(curfile)
         name = self.get_name()
         kicad_pcb_file = "{}.kicad_pcb".format(name)
@@ -381,20 +380,25 @@ class Svg2ShenzhenExport(inkex.Effect):
 
         options_path = os.path.join(cache_folder_path, 'options.pickle')
 
-        if os.path.exists(options_path):
-            with open(options_path, 'r') as f:
+        if os.path.exists(options_path) and (os.path.exists(options_path) != 0):
+            with open(options_path, 'rb') as f:
                 prev_options = pickle.load(f)
-            dpi_equal = prev_options.dpi == options.dpi
-            path_equal = prev_options.path == options.path
-            crop_equal = prev_options.crop == options.crop
-            filetype_equal = prev_options.filetype == options.filetype
-            threshold_equal = prev_options.threshold == options.threshold
+            dpi_equal = prev_options["dpi"] == options.dpi
+            path_equal = prev_options["path"] == options.path
+            crop_equal = prev_options["crop"] == options.crop
+            filetype_equal = prev_options["filetype"] == options.filetype
+            threshold_equal = prev_options["threshold"] == options.threshold
             ignore_hashes = not dpi_equal or not path_equal or not crop_equal or not filetype_equal or not threshold_equal
         else:
             ignore_hashes = True
 
-        with open(options_path, 'w') as f:
-            pickle.dump(options, f)
+        to_store = {}
+        for option in vars(options):
+            if option != "output":
+                to_store[option] = vars(options)[option]
+
+        with open(options_path, 'wb') as f:
+            pickle.dump(to_store, f)
 
         layer_arguments = []
         temp_svg_paths = []
@@ -545,7 +549,7 @@ class Svg2ShenzhenExport(inkex.Effect):
             layer_label_name = layer_label.replace("-invert", "")
             layer_label_name = layer_label_name.replace("-auto", "")
 
-            if  layer_label_name in self.layer_map.iterkeys():
+            if  layer_label_name in self.layer_map:
                 layer_type = "export"
                 layer_label = layer_label
             elif layer_label.lower().startswith("[fixed] "):
@@ -592,8 +596,8 @@ class Svg2ShenzhenExport(inkex.Effect):
 
 
     def exportToPng(self, svg_path, output_path):
-        area_param = '-D' if self.options.crop else 'C'
-        command = "inkscape %s -d %s -e \"%s\" \"%s\"" % (area_param, self.options.dpi, output_path, svg_path)
+        area_param = '-D' if self.options.crop else '-C'
+        command = "inkscape %s -d %s -o \"%s\" \"%s\"" % (area_param, int(self.options.dpi), output_path, svg_path)
         if (self.options.debug):
             inkex.debug(command)
         return subprocess.Popen(command.encode("utf-8"), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -745,8 +749,9 @@ class Svg2ShenzhenExport(inkex.Effect):
 
 def _main():
     e = Svg2ShenzhenExport()
-    e.affect()
+    e.run()
     exit()
 
 if __name__ == "__main__":
     _main()
+    

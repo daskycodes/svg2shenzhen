@@ -10,7 +10,6 @@ import shutil
 import copy
 import simplepath, simpletransform
 
-from simplestyle import *
 from copy import deepcopy
 from io import BytesIO
 from lxml import etree
@@ -21,8 +20,8 @@ class Svg2ShenzhenPrepare(inkex.Effect):
     def __init__(self):
         """init the effetc library and get options from gui"""
         inkex.Effect.__init__(self)
-        self.OptionParser.add_option("--docwidth", action="store", type="float", dest="docwidth", default=0.0)
-        self.OptionParser.add_option("--docheight", action="store", type="float", dest="docheight", default=0.0)
+        self.arg_parser.add_argument("--docwidth", type=float, dest="docwidth", default=0.0)
+        self.arg_parser.add_argument("--docheight", type=float, dest="docheight", default=0.0)
 
         self.bb_width_center = 0
         self.bb_height_center = 0
@@ -62,19 +61,19 @@ class Svg2ShenzhenPrepare(inkex.Effect):
 
     def createLayer(self, layer_name):
         svg = self.document.xpath('//svg:svg',namespaces=inkex.NSS)[0]
-        layer = inkex.etree.SubElement(svg, 'g')
+        layer = etree.SubElement(svg, 'g')
         layer.set(inkex.addNS('label', 'inkscape'), '%s' % layer_name)
         layer.set(inkex.addNS('groupmode', 'inkscape'), 'layer')
         return layer
 
     def createWhitebg(self):
-        rect = inkex.etree.Element(inkex.addNS('rect','svg'))
+        rect = etree.Element(inkex.addNS('rect','svg'))
         rect.set('x', "0")
         rect.set('y', "0")
         rect.set('width', str(self.doc_width/self.bb_scaling_w))
         rect.set('height', str(self.doc_height/self.bb_scaling_h))
         style = {'fill' : '#FFFFFF', 'fill-opacity' : '1', 'stroke': 'none'}
-        rect.set('style', formatStyle(style))
+        rect.set('style', str(inkex.Style(style)))
         return rect
 
     def findLayer(self, layerName):
@@ -200,7 +199,7 @@ class Svg2ShenzhenPrepare(inkex.Effect):
         doc_view.attrib['borderlayer'] = "true"
         doc_view.attrib['showgrid'] = "true"
 
-        grid = inkex.etree.Element(inkex.addNS('grid','inkscape'))
+        grid = etree.Element(inkex.addNS('grid','inkscape'))
         grid.set('spacingx', '2.54')
         grid.set('spacingy', '2.54')
         grid.set('empspacing', '1')
@@ -331,8 +330,9 @@ class Svg2ShenzhenPrepare(inkex.Effect):
 
 def _main():
     e = Svg2ShenzhenPrepare()
-    e.affect()
+    e.run()
     exit()
 
 if __name__ == "__main__":
     _main()
+    
