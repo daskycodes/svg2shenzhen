@@ -10,6 +10,7 @@ import shutil
 import copy
 import simplepath, simpletransform
 
+from simplestyle import *
 from copy import deepcopy
 from io import BytesIO
 from lxml import etree
@@ -89,7 +90,7 @@ class Svg2ShenzhenPrepare(inkex.Effect):
     def addStamp(self,layer, textStr):
 
         # Create text element
-        text = inkex.etree.Element(inkex.addNS('text','svg'))
+        text = etree.Element(inkex.addNS('text','svg'))
         text.text = str(textStr)
 
         # Set text position to center of document.
@@ -98,7 +99,7 @@ class Svg2ShenzhenPrepare(inkex.Effect):
 
         # Center text horizontally with CSS style.
         style = {'text-align' : 'center', 'text-anchor': 'middle'}
-        text.set('style', formatStyle(style))
+        text.set('style', str(inkex.Style(style)))
 
         # Connect elements together.
         layer.append(text)
@@ -335,4 +336,3 @@ def _main():
 
 if __name__ == "__main__":
     _main()
-    
